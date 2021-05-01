@@ -1,30 +1,44 @@
-const express = require('express');
-const Project = require('./model');
-const router = express.Router();
+const db = require('../../data/dbConfig');
 
-router.get('/', async (req, res, next) => {
-  try {
-      const projects = await Project.getAll();
-      res.status(200).json(projects);
-  } catch (error) {
-      next(error)
-  }
-});
+const getAll = async () => {
+    try {
+        const tasks = await db('task');
+        return tasks
+            .map(task => 
+                task.task_completed === 0 ?
+                {...task, task_completed: false} :
+                {...task, task_completed: true});
+    } catch (error) {
+        return {error: `unable to get tasks`}
+    }
+}
 
-router.post('/', async (req, res, next) => {
-  try {
-      const newProject = await Project.insert(req.body);
-      res.status(201).json(newProject);
-  } catch (error) {
-      next(error)
-  }
-})
+const getById = async id => {
+    try {
+        const task = await db('task').where({ task_id: id }).first();
+        return {
+            ...task,
+            task_completed: task.task_completed === 0 ?
+                false : true
+        }
+    } catch (error) { 
+        return {error: `unable to get task`}
+        
+    }
+}
 
-router.use((error, req, res) => {
-    res.status(500).json({
-        message: error.message,
-        stack: error.stack
-    });
-});
+const insert = async record => {
+    try {
+        const taskId = await db ('task')
+            .insert(record);
+        return getById(taskId[0]);
+    } catch (error) {
+        return {error: `unable to post task`}
+    }
+}
 
-module.exports = router;
+module.exports = {
+    getAll,
+    getById,
+    insert
+}
